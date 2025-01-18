@@ -13,6 +13,7 @@ const {
 
 var banstring = ' set fail2ban-rest banip ';
 var unbanstring = ' set fail2ban-rest unbanip ';
+var checkBannedIp = ' get fail2ban-rest banned ';
 
 function sendBadRequest(res) {
     res.status(400).end('Bad request');
@@ -42,6 +43,18 @@ function banUnbanIP(ban, ip, res) {
     }
 }
 
+function getBannedIp(ip, res) {
+    exec(config.fail2ban_cli + checkBannedIp + ip, function (err, stdout, stderr) {
+            if (err) {
+                console.error(err);
+                res.status(500).end('Internal server error.');
+            } else {
+                console.log('ban ip response', stdout);
+                res.status(200).send(stdout).end('Ok');
+            }
+        });
+}
+
 
 app.get('/ban/:ip', function (req, res) {
     if (req.params.ip) {
@@ -65,6 +78,22 @@ app.get('/unban/:ip', function (req, res) {
         if (/^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(req.params.ip)) {
             console.log('valid IP');
             banUnbanIP(false, req.params.ip, res);
+        } else {
+            console.log('invalid IP');
+            sendBadRequest(res);
+        }
+
+    } else {
+        sendBadRequest(res);
+    }
+});
+
+app.get('/check-ban/:ip', function (req, res) {
+    if (req.params.ip) {
+        console.log('check ban request for ', req.params.ip);
+        if (/^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(req.params.ip)) {
+            console.log('valid IP');
+            getBannedIp(req.params.ip, res);
         } else {
             console.log('invalid IP');
             sendBadRequest(res);
